@@ -6,9 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 years = range(2019, 2025)
-
 months = ['01', '02', '03']
-
 sumsByYear = {}
 
 # Loop sobre os anos
@@ -26,6 +24,8 @@ for year in years:
             data = pd.read_csv(file, sep=';', quoting=csv.QUOTE_NONE, encoding='latin-1', on_bad_lines='skip')
             # Limpar a coluna "VALOR TRANSFERIDO"
             data['"VALOR TRANSFERIDO"'] = data['"VALOR TRANSFERIDO"'].str.strip('"').str.replace(',', '.').astype(float)
+            # Filtrar os dados para a UF de SP e a função de educação
+            data = data[(data['"UF"'] == '"SP"') & (data['"NOME FUNÇÃO"'] == '"Educação"')]
             # Adicionar a soma do mês à soma do ano
             yearSum += data['"VALOR TRANSFERIDO"'].sum()
     # Armazenar a soma do ano no dicionário de somas por ano
@@ -33,40 +33,30 @@ for year in years:
 
 # Imprimir as somas por ano
 for year, soma in sumsByYear.items():
-    print(f'✅ A soma das transferencias realizadas pelo governo no primeiro trimestre de {year} foi: {soma} 🪙')
+    print(f'✅ A soma das transferencias realizadas pelo governo para educação em São Paulo no primeiro trimestre de {year} foi: {soma} 🪙')
 
-# Plotar o gráfico de soma
-plt.figure(figsize=(10, 6))
-plt.bar(sumsByYear.keys(), sumsByYear.values(), color='skyblue')
-plt.title('Soma de valor das transferencias no 1 trimestre anualmente')
-plt.xlabel('Ano')
-plt.ylabel('Soma das Transferências')
-plt.grid(True)
+# Criar uma figura e um eixo (subplot)
+fig, ax1 = plt.subplots(figsize=(10, 6))
 
-# Salvar o gráfico como um arquivo PNG
-plt.savefig('soma_dos_valores_dos_trimestres.png')
+# Plotar a soma dos valores no primeiro eixo
+ax1.plot(sumsByYear.keys(), sumsByYear.values(), marker='o', color='skyblue', linestyle='-', label='Soma das Transferências')
+ax1.set_xlabel('Ano')
+ax1.set_ylabel('Soma das Transferências')
+ax1.ticklabel_format(style='plain', axis='y', useOffset=False)
+ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:,.0f}M'.format(x / 1e6)))
+ax1.grid(True)
 
-print('📊 Gráfico de soma foi salvo como soma_dos_valores_dos_trimestres.png ✅')
-
-# Calcular a diferença percentual entre os valores de sumsByYear
-differences = {}
-previous_value = None
+# Adicionar valores percentuais de aumento/diminuição acima de cada ponto do gráfico azul
 for year, value in sumsByYear.items():
-    if previous_value is not None:
-        difference_percent = ((value - previous_value) / previous_value) * 100
-        differences[year] = difference_percent
-    previous_value = value
+    if year != min(sumsByYear.keys()):
+        difference_percent = ((value - sumsByYear[year - 1]) / sumsByYear[year - 1]) * 100
+        ax1.text(year, value, f'{difference_percent:.2f}%', ha='center', va='bottom', fontsize=8)
 
-# Plotar o gráfico
-plt.figure(figsize=(10, 6))
-sns.barplot(x=list(differences.keys()), y=list(differences.values()), palette='coolwarm')
-plt.title('Diferença Percentual nas Soma Anual das Transferências')
-plt.xlabel('Ano')
-plt.ylabel('Diferença Percentual (%)')
-plt.grid(True)
+# Título geral para o gráfico
+plt.title('Soma de valor das transferências e Variação Percentual para educação em SP no 1 trimestre anualmente')
 
 # Salvar o gráfico como um arquivo PNG
-plt.savefig('diferenca_percentual.png')
+plt.savefig('soma_e_variacao_percentual.png')
 
-print('📊 Gráfico de percentual foi salvo como diferenca_percentual.png ✅')
 
+print('📊 Gráfico combinado foi salvo como soma_e_variacao_percentual.png ✅')
