@@ -3,60 +3,73 @@ import csv
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-import seaborn as sns
 
-years = range(2019, 2025)
-months = ['01', '02', '03']
-sumsByYear = {}
+def plot_transferencias_por_regiao(estados_regiao, regiao, color):
+    sumsByYear = {}
 
-# Loop sobre os anos
-for year in years:
-    # Inicializar a soma do ano
-    yearSum = 0
-    # Loop sobre os meses do primeiro trimestre
-    for month in months:
-        # Construir o caminho do arquivo
-        file = f'./docs/{year}/{year}{month}_Transferencias.csv'
-        # Verificar se o arquivo existe
-        if os.path.exists(file):
-            print(f'🔍 Lendo o arquivo: {file} ')
-            # Carregar o DataFrame
-            data = pd.read_csv(file, sep=';', quoting=csv.QUOTE_NONE, encoding='latin-1', on_bad_lines='skip')
-            # Limpar a coluna "VALOR TRANSFERIDO"
-            data['"VALOR TRANSFERIDO"'] = data['"VALOR TRANSFERIDO"'].str.strip('"').str.replace(',', '.').astype(float)
-            # Filtrar os dados para a UF de SP e a função de educação
-            data = data[(data['"UF"'] == '"SP"') & (data['"NOME FUNÇÃO"'] == '"Educação"')]
-            # Adicionar a soma do mês à soma do ano
-            yearSum += data['"VALOR TRANSFERIDO"'].sum()
-    # Armazenar a soma do ano no dicionário de somas por ano
-    sumsByYear[year] = np.round(yearSum)
+    years = range(2019, 2025)
+    months = ['01', '02', '03']
 
-# Imprimir as somas por ano
-for year, soma in sumsByYear.items():
-    print(f'✅ A soma das transferencias realizadas pelo governo para educação em São Paulo no primeiro trimestre de {year} foi: {soma} 🪙')
+    # Loop sobre os anos
+    for year in years:
+        # Inicializar a soma do ano
+        yearSum = 0
+        # Loop sobre os meses do primeiro trimestre
+        for month in months:
+            # Construir o caminho do arquivo
+            file = f'./docs/{year}/{year}{month}_Transferencias.csv'
+            # Verificar se o arquivo existe
+            if os.path.exists(file):
+                # Carregar o DataFrame
+                data = pd.read_csv(file, sep=';', quoting=csv.QUOTE_NONE, encoding='latin-1', on_bad_lines='skip')
+                # Limpar a coluna "VALOR TRANSFERIDO"
+                data['"VALOR TRANSFERIDO"'] = data['"VALOR TRANSFERIDO"'].str.strip('"').str.replace(',', '.').astype(float)
+                # Filtrar os dados para a UF da região e a função de educação
+                data = data[(data['"UF"'].str.strip('"').isin(estados_regiao)) & (data['"NOME FUNÇÃO"'] == '"Educação"')]
+                # Adicionar a soma do mês à soma do ano
+                yearSum += data['"VALOR TRANSFERIDO"'].sum()
+        # Armazenar a soma do ano no dicionário de somas por ano
+        sumsByYear[year] = np.round(yearSum)
 
-# Criar uma figura e um eixo (subplot)
-fig, ax1 = plt.subplots(figsize=(10, 6))
+    # Imprimir as somas por ano
+    for year, soma in sumsByYear.items():
+        print(f'✅ A soma das transferências realizadas pelo governo para educação na {regiao} no primeiro trimestre de {year} foi: {soma} 🪙')
 
-# Plotar a soma dos valores no primeiro eixo
-ax1.plot(sumsByYear.keys(), sumsByYear.values(), marker='o', color='skyblue', linestyle='-', label='Soma das Transferências')
-ax1.set_xlabel('Ano')
-ax1.set_ylabel('Soma das Transferências')
-ax1.ticklabel_format(style='plain', axis='y', useOffset=False)
-ax1.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: '{:,.0f}M'.format(x / 1e6)))
-ax1.grid(True)
+    # Plotar a soma dos valores para a região com a cor específica
+    plt.plot(sumsByYear.keys(), sumsByYear.values(), marker='o', linestyle='-', color=color, label=regiao)
 
-# Adicionar valores percentuais de aumento/diminuição acima de cada ponto do gráfico azul
-for year, value in sumsByYear.items():
-    if year != min(sumsByYear.keys()):
-        difference_percent = ((value - sumsByYear[year - 1]) / sumsByYear[year - 1]) * 100
-        ax1.text(year, value, f'{difference_percent:.2f}%', ha='center', va='bottom', fontsize=8)
+# Lista de estados por região
+estados_norte = ['AC', 'AP', 'AM', 'PA', 'RO', 'RR', 'TO']
+estados_nordeste = ['AL', 'BA', 'CE', 'MA', 'PB', 'PE', 'PI', 'RN', 'SE']
+estados_centro_oeste = ['GO', 'MT', 'MS', 'DF']
+estados_sudeste = ['ES', 'MG', 'RJ', 'SP']
+estados_sul = ['PR', 'RS', 'SC']
 
-# Título geral para o gráfico
-plt.title('Soma de valor das transferências e Variação Percentual para educação em SP no 1 trimestre anualmente')
+# Configurar cores para cada região
+cores = ['blue', 'orange', 'green', 'red', 'purple']
+
+# Gerar gráfico único para todas as regiões
+plt.figure(figsize=(10, 6))
+
+# Gerar gráfico para cada região
+plot_transferencias_por_regiao(estados_norte, 'Região Norte', cores[0])
+plot_transferencias_por_regiao(estados_nordeste, 'Região Nordeste', cores[1])
+plot_transferencias_por_regiao(estados_centro_oeste, 'Região Centro-Oeste', cores[2])
+plot_transferencias_por_regiao(estados_sudeste, 'Região Sudeste', cores[3])
+plot_transferencias_por_regiao(estados_sul, 'Região Sul', cores[4])
+
+# Adicionar legenda
+plt.legend()
+
+# Adicionar título e rótulos dos eixos
+plt.title('Soma de valor das transferências para educação por região no 1º trimestre anualmente')
+plt.xlabel('Ano')
+plt.ylabel('Soma das Transferências (em Milhões de Reais)')
 
 # Salvar o gráfico como um arquivo PNG
-plt.savefig('soma_e_variacao_percentual.png')
+plt.savefig('soma_transferencias_por_regiao.png')
 
+print('📊 Gráfico único para todas as regiões foi salvo como soma_transferencias_por_regiao.png ✅')
 
-print('📊 Gráfico combinado foi salvo como soma_e_variacao_percentual.png ✅')
+# Exibir o gráfico
+plt.show()
